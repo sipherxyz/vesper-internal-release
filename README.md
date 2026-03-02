@@ -21,6 +21,33 @@ Go to the [Releases](https://github.com/sipherxyz/vesper-internal-release/releas
 
 ## Installation
 
+### Quick Install (Automated)
+
+Use the installer scripts in this repository to download the latest release, verify checksum (when published), install Vesper, and then:
+
+- Ensure `claude` is installed (auto-installs if missing)
+- Ensure `ai-gateway` is installed (auto-installs if missing)
+- Run `ai-gateway status`, and auto-run `ai-gateway login` when status indicates not logged in
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sipherxyz/vesper-internal-release/main/install.sh | bash
+```
+
+**Windows (CMD / PowerShell)**
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/sipherxyz/vesper-internal-release/main/install.ps1 | iex"
+```
+
+You can also download and run scripts locally:
+
+- `install.sh`
+- `install.ps1`
+
+---
+
 ### macOS
 
 1. Download `Vesper-arm64.dmg` (Apple Silicon) or `Vesper-x64.dmg` (Intel)
@@ -93,7 +120,7 @@ sudo dnf install fuse fuse-libs
 
 ## Updating
 
-When a new version is released, download the latest installer from the [Releases](https://github.com/sipherxyz/vesper-internal-release/releases) page and install it over the existing version. Your settings and data in `~/.vesper/` are preserved across updates.
+When a new version is released, run the same install command again, or download the latest installer from the [Releases](https://github.com/sipherxyz/vesper-internal-release/releases) page and install it over the existing version. Your settings and data in `~/.vesper/` are preserved across updates.
 
 ---
 

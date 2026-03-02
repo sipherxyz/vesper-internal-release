@@ -167,7 +167,21 @@ ensure_ai_gateway_login_if_needed() {
     :
   fi
 
-  if printf "%s" "$status_output" | grep -Eqi "not[[:space:]-]*logged|not[[:space:]-]*authenticated|login required|sign[[:space:]-]*in required"; then
+  local has_key_missing="false"
+  local has_session_ok="false"
+  local has_session_present="false"
+
+  if printf "%s" "$status_output" | grep -Eqi '(^|[[:space:]])key=missing($|[[:space:]])'; then
+    has_key_missing="true"
+  fi
+  if printf "%s" "$status_output" | grep -Eqi '(^|[[:space:]])session=ok($|[[:space:]])'; then
+    has_session_ok="true"
+  fi
+  if printf "%s" "$status_output" | grep -Eqi '(^|[[:space:]])session=present($|[[:space:]])'; then
+    has_session_present="true"
+  fi
+
+  if [ "$has_key_missing" = "true" ] || { [ "$has_session_ok" = "false" ] && [ "$has_session_present" = "false" ]; }; then
     info "ai-gateway is not logged in. Running 'ai-gateway login'..."
     if ai-gateway login; then
       success "ai-gateway login completed."

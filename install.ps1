@@ -99,7 +99,12 @@ function Ensure-AiGatewayLoginIfNeeded {
     Write-Info "Checking ai-gateway login status..."
     $statusOutput = & ai-gateway status 2>&1 | Out-String
 
-    if ($statusOutput -match '(?i)not\s*-?\s*logged|not\s*-?\s*authenticated|login required|sign\s*-?\s*in required') {
+    $hasKeyMissing = $statusOutput -match '(?i)(^|\s)key=missing($|\s)'
+    $hasSessionOk = $statusOutput -match '(?i)(^|\s)session=ok($|\s)'
+    $hasSessionPresent = $statusOutput -match '(?i)(^|\s)session=present($|\s)'
+    $needsLogin = $hasKeyMissing -or (-not $hasSessionOk -and -not $hasSessionPresent)
+
+    if ($needsLogin) {
         Write-Info "ai-gateway is not logged in. Running 'ai-gateway login'..."
         & ai-gateway login
         if ($LASTEXITCODE -eq 0) {

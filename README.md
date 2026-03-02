@@ -6,22 +6,7 @@ Download the latest version from the **[Releases](https://github.com/sipherxyz/v
 
 ---
 
-## Download
-
-| Platform | File | Architecture |
-|----------|------|-------------|
-| macOS (Apple Silicon) | `Vesper-arm64.dmg` | M1 / M2 / M3 / M4 |
-| macOS (Intel) | `Vesper-x64.dmg` | Intel x86_64 |
-| Windows | `Vesper-x64.exe` | 64-bit |
-| Linux | `Vesper-x86_64.AppImage` | 64-bit |
-
-Go to the [Releases](https://github.com/sipherxyz/vesper-internal-release/releases) page and download the file matching your platform.
-
----
-
-## Installation
-
-### Quick Install (Automated)
+## Quick Install (Automated)
 
 Use the installer scripts in this repository to download the latest release, verify checksum (when published), install Vesper, and then:
 
@@ -48,7 +33,24 @@ You can also download and run scripts locally:
 
 ---
 
-### macOS
+## Manual Install
+
+### Download
+
+| Platform | File | Architecture |
+|----------|------|-------------|
+| macOS (Apple Silicon) | [`Vesper-arm64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-arm64.dmg) | M1 / M2 / M3 / M4 |
+| macOS (Intel) | [`Vesper-x64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.dmg) | Intel x86_64 |
+| Windows | [`Vesper-x64.exe`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.exe) | 64-bit |
+| Linux | [`Vesper-x86_64.AppImage`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x86_64.AppImage) | 64-bit |
+
+You can use the direct links above, or browse all assets on the [Releases](https://github.com/sipherxyz/vesper-internal-release/releases) page.
+
+---
+
+### Installation
+
+#### macOS
 
 1. Download `Vesper-arm64.dmg` (Apple Silicon) or `Vesper-x64.dmg` (Intel)
 2. Open the `.dmg` file
@@ -68,7 +70,7 @@ macOS may show _"Vesper can't be opened because Apple cannot check it for malici
 
 Then open Vesper again normally.
 
-### Windows
+#### Windows
 
 1. Download `Vesper-x64.exe`
 2. Run the installer and follow the prompts
@@ -79,7 +81,7 @@ Then open Vesper again normally.
 
 Windows may show _"Windows protected your PC"_. Click **More info**, then click **Run anyway**.
 
-### Linux
+#### Linux
 
 1. Download `Vesper-x86_64.AppImage`
 2. Make it executable and run:

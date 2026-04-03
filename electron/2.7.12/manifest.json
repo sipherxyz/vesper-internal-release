@@ -1,0 +1,31 @@
+{
+  "version": "2.7.12",
+  "build_time": "2026-04-03T04:43:05.151Z",
+  "build_timestamp": 1775191385151,
+  "binaries": {
+    "darwin-arm64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.7.12/Vesper-arm64.dmg",
+      "sha256": "2125f1fe497c5f9e90e9e2efeb0103ca0a79a51ee699fd33aff002ba67da4ccc",
+      "size": 167844949,
+      "filename": "Vesper-arm64.dmg"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.7.12/Vesper-x64.dmg",
+      "sha256": "94efd9b73ea97ad97dfc92a04837f00726304fd7d94466a44aff73dc8386e571",
+      "size": 173607571,
+      "filename": "Vesper-x64.dmg"
+    },
+    "win32-x64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.7.12/Vesper-x64.exe",
+      "sha256": "59c82e4c5aef9ff60a9c6c2851966ffebf2cd70b9a772500637e6265e779a027",
+      "size": 266180431,
+      "filename": "Vesper-x64.exe"
+    },
+    "linux-x64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.7.12/Vesper-x86_64.AppImage",
+      "sha256": "a340c61a53bd7ca420b1a3e7c1763041f7567fb376669f8112219baf5312fa2c",
+      "size": 247982785,
+      "filename": "Vesper-x86_64.AppImage"
+    }
+  }
+}

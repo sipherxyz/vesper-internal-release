@@ -11,8 +11,17 @@ $VERSIONS_URL = if ($env:VESPER_ELECTRON_VERSIONS_URL -and $env:VESPER_ELECTRON_
 } else {
     $DEFAULT_VERSIONS_URL
 }
+$RELEASE_CHANNEL = if ($env:VESPER_RELEASE_CHANNEL -and $env:VESPER_RELEASE_CHANNEL.Trim().Length -gt 0) {
+    $env:VESPER_RELEASE_CHANNEL.Trim().ToLowerInvariant()
+} else {
+    'latest'
+}
 $DOWNLOAD_DIR = "$env:TEMP\vesper-install"
 $APP_NAME = "Vesper"
+
+if ($RELEASE_CHANNEL -notin @('latest', 'beta', 'nightly')) {
+    Write-Err "Unsupported release channel: $RELEASE_CHANNEL"
+}
 
 # Colors for output
 function Write-Info { Write-Host "> $args" -ForegroundColor Blue }
@@ -51,6 +60,95 @@ function Get-ReleaseAssetName([string]$Platform) {
     }
 }
 
+function Get-ReleaseChannelForVersion([string]$Version) {
+    if ($Version -match '^\d+\.\d+\.\d+-nightly\.\d{12}$') {
+        return 'nightly'
+    }
+    if ($Version -match '^\d+\.\d+\.\d+-beta\.\d+$') {
+        return 'beta'
+    }
+    if ($Version -match '^\d+\.\d+\.\d+$') {
+        return 'latest'
+    }
+    return $null
+}
+
+function Test-ReleaseChannelAllowed([string]$SelectedChannel, [string]$CandidateChannel) {
+    switch ($SelectedChannel) {
+        'latest' { return $CandidateChannel -eq 'latest' }
+        'beta' { return $CandidateChannel -in @('latest', 'beta') }
+        'nightly' { return $CandidateChannel -in @('latest', 'beta', 'nightly') }
+        default { return $false }
+    }
+}
+
+function Get-ReleaseVersionParts([string]$Version) {
+    if ($Version -match '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-nightly\.(?<build>\d{12})$') {
+        return @{
+            major = [int]$Matches.major
+            minor = [int]$Matches.minor
+            patch = [int]$Matches.patch
+            rank = 2
+            prerelease = [long]$Matches.build
+        }
+    }
+
+    if ($Version -match '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-beta\.(?<build>\d+)$') {
+        return @{
+            major = [int]$Matches.major
+            minor = [int]$Matches.minor
+            patch = [int]$Matches.patch
+            rank = 1
+            prerelease = [long]$Matches.build
+        }
+    }
+
+    if ($Version -match '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$') {
+        return @{
+            major = [int]$Matches.major
+            minor = [int]$Matches.minor
+            patch = [int]$Matches.patch
+            rank = 3
+            prerelease = [long]0
+        }
+    }
+
+    return $null
+}
+
+function Compare-ReleaseVersion([string]$Left, [string]$Right) {
+    $leftParts = Get-ReleaseVersionParts $Left
+    $rightParts = Get-ReleaseVersionParts $Right
+    if (-not $leftParts -or -not $rightParts) {
+        return 0
+    }
+
+    foreach ($field in @('major', 'minor', 'patch', 'rank', 'prerelease')) {
+        if ($leftParts[$field] -gt $rightParts[$field]) {
+            return 1
+        }
+        if ($leftParts[$field] -lt $rightParts[$field]) {
+            return -1
+        }
+    }
+
+    return 0
+}
+
+function Test-FoundRequiredReleaseChannels(
+    [string]$SelectedChannel,
+    [bool]$FoundLatest,
+    [bool]$FoundBeta,
+    [bool]$FoundNightly
+) {
+    switch ($SelectedChannel) {
+        'latest' { return $FoundLatest }
+        'beta' { return $FoundLatest -and $FoundBeta }
+        'nightly' { return $FoundLatest -and $FoundBeta -and $FoundNightly }
+        default { return $false }
+    }
+}
+
 # Check for Windows
 if ($env:OS -ne "Windows_NT") {
     Write-Err "This installer is for Windows only."
@@ -63,6 +161,7 @@ $platform = "win32-$arch"
 Write-Host ""
 Write-Info "Detected platform: $platform"
 Write-Info "Using metadata source: $VERSIONS_URL"
+Write-Info "Using release channel: $RELEASE_CHANNEL"
 
 $githubRepo = Get-GitHubReleaseRepo $VERSIONS_URL
 
@@ -71,18 +170,67 @@ New-Item -ItemType Directory -Force -Path $DOWNLOAD_DIR | Out-Null
 
 # Get latest version
 if ($githubRepo) {
-    Write-Info "Fetching latest release..."
+    Write-Info "Fetching release list..."
     try {
-        $latestJson = Invoke-RestMethod -Uri "https://api.github.com/repos/$($githubRepo.owner)/$($githubRepo.repo)/releases/latest" -UseBasicParsing
-        $releaseTag = $latestJson.tag_name
+        $releases = @()
+        $foundLatest = $false
+        $foundBeta = $false
+        $foundNightly = $false
+        for ($page = 1; $page -le 10; $page++) {
+            $pageReleases = Invoke-RestMethod -Uri "https://api.github.com/repos/$($githubRepo.owner)/$($githubRepo.repo)/releases?per_page=100&page=$page" -UseBasicParsing
+            if ($pageReleases) {
+                $releases += @($pageReleases)
+                foreach ($pageRelease in @($pageReleases)) {
+                    if ($pageRelease.draft) {
+                        continue
+                    }
+
+                    $pageVersion = if ($pageRelease.tag_name) { $pageRelease.tag_name -replace '^[Vv]', '' } else { '' }
+                    switch (Get-ReleaseChannelForVersion $pageVersion) {
+                        'latest' { $foundLatest = $true }
+                        'beta' { $foundBeta = $true }
+                        'nightly' { $foundNightly = $true }
+                    }
+                }
+            }
+            if (Test-FoundRequiredReleaseChannels $RELEASE_CHANNEL $foundLatest $foundBeta $foundNightly) {
+                break
+            }
+            if (@($pageReleases).Count -lt 100) {
+                break
+            }
+        }
+        $release = $null
+        $bestVersion = $null
+        foreach ($candidateRelease in $releases) {
+            if ($candidateRelease.draft) {
+                continue
+            }
+
+            $candidateVersion = if ($candidateRelease.tag_name) { $candidateRelease.tag_name -replace '^[Vv]', '' } else { '' }
+            $candidateChannel = Get-ReleaseChannelForVersion $candidateVersion
+            if (-not (Test-ReleaseChannelAllowed $RELEASE_CHANNEL $candidateChannel)) {
+                continue
+            }
+
+            if (-not $bestVersion -or (Compare-ReleaseVersion $candidateVersion $bestVersion) -gt 0) {
+                $release = $candidateRelease
+                $bestVersion = $candidateVersion
+            }
+        }
+        $releaseTag = $release.tag_name
+        if (-not $releaseTag) {
+            Write-Err "Failed to resolve a release tag for channel $RELEASE_CHANNEL"
+        }
+        $latestJson = Invoke-RestMethod -Uri "https://api.github.com/repos/$($githubRepo.owner)/$($githubRepo.repo)/releases/tags/$releaseTag" -UseBasicParsing
         $version = if ($releaseTag) { $releaseTag -replace '^[Vv]', '' } else { $null }
     } catch {
         Write-Err "Failed to fetch latest release: $_"
     }
 } else {
-    Write-Info "Fetching latest version..."
+    Write-Info "Fetching $RELEASE_CHANNEL pointer..."
     try {
-        $latestJson = Invoke-RestMethod -Uri "$VERSIONS_URL/latest" -UseBasicParsing
+        $latestJson = Invoke-RestMethod -Uri "$VERSIONS_URL/$RELEASE_CHANNEL" -UseBasicParsing
         $version = $latestJson.version
     } catch {
         Write-Err "Failed to fetch latest version: $_"

@@ -4,6 +4,7 @@ set -e
 
 DEFAULT_VERSIONS_URL="https://raw.githubusercontent.com/sipherxyz/vesper-internal-release/gh-pages/electron"
 VERSIONS_URL="${VESPER_ELECTRON_VERSIONS_URL:-$DEFAULT_VERSIONS_URL}"
+RELEASE_CHANNEL="${VESPER_RELEASE_CHANNEL:-latest}"
 # Normalize trailing slashes to keep URL joins stable.
 VERSIONS_URL="$(printf '%s' "$VERSIONS_URL" | sed 's:/*$::')"
 DOWNLOAD_DIR="$HOME/.vesper/downloads"
@@ -20,6 +21,11 @@ info() { printf "%b\n" "${BLUE}>${NC} $1"; }
 success() { printf "%b\n" "${GREEN}>${NC} $1"; }
 warn() { printf "%b\n" "${YELLOW}!${NC} $1"; }
 error() { printf "%b\n" "${RED}x${NC} $1"; exit 1; }
+
+case "$RELEASE_CHANNEL" in
+    latest|beta|nightly) ;;
+    *) error "Unsupported release channel: $RELEASE_CHANNEL" ;;
+esac
 
 normalize_json() {
     printf '%s' "$1" | tr -d '\n\r\t' | sed 's/ \+/ /g'
@@ -47,6 +53,140 @@ EOF
 
 strip_leading_v() {
     printf '%s' "$1" | sed 's/^[Vv]//'
+}
+
+classify_release_channel() {
+    if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+-nightly\.[0-9]{12}$ ]]; then
+        printf '%s' "nightly"
+        return 0
+    fi
+    if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
+        printf '%s' "beta"
+        return 0
+    fi
+    if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        printf '%s' "latest"
+        return 0
+    fi
+
+    return 1
+}
+
+release_channel_allowed() {
+    local selected="$1"
+    local candidate="$2"
+
+    case "$selected" in
+        latest) [ "$candidate" = "latest" ] ;;
+        beta) [ "$candidate" = "latest" ] || [ "$candidate" = "beta" ] ;;
+        nightly) [ "$candidate" = "latest" ] || [ "$candidate" = "beta" ] || [ "$candidate" = "nightly" ] ;;
+        *) return 1 ;;
+    esac
+}
+
+version_sort_key() {
+    local version="$1"
+    local major minor patch channel_rank prerelease_value
+
+    if [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-nightly\.([0-9]{12})$ ]]; then
+        major="${BASH_REMATCH[1]}"
+        minor="${BASH_REMATCH[2]}"
+        patch="${BASH_REMATCH[3]}"
+        channel_rank=2
+        prerelease_value="${BASH_REMATCH[4]}"
+    elif [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-beta\.([0-9]+)$ ]]; then
+        major="${BASH_REMATCH[1]}"
+        minor="${BASH_REMATCH[2]}"
+        patch="${BASH_REMATCH[3]}"
+        channel_rank=1
+        prerelease_value="${BASH_REMATCH[4]}"
+    elif [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        major="${BASH_REMATCH[1]}"
+        minor="${BASH_REMATCH[2]}"
+        patch="${BASH_REMATCH[3]}"
+        channel_rank=3
+        prerelease_value=0
+    else
+        return 1
+    fi
+
+    printf '%09d%09d%09d%01d%012d' "$major" "$minor" "$patch" "$channel_rank" "$prerelease_value"
+}
+
+pick_newest_allowed_release_tag_from_list() {
+    local json="$1"
+    local selected_channel="$2"
+    local normalized tag version candidate_channel key best_key='' best_tag=''
+
+    normalized="$(normalize_json "$json")"
+
+    while [[ $normalized =~ \"tag_name\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; do
+        tag="${BASH_REMATCH[1]}"
+        version="$(strip_leading_v "$tag")"
+        candidate_channel="$(classify_release_channel "$version" || true)"
+        if [ -n "$candidate_channel" ] && release_channel_allowed "$selected_channel" "$candidate_channel"; then
+            key="$(version_sort_key "$version" || true)"
+            if [ -n "$key" ] && { [ -z "$best_key" ] || [ "$key" ">" "$best_key" ]; }; then
+                best_key="$key"
+                best_tag="$tag"
+            fi
+        fi
+        normalized="${normalized#*\"tag_name\":\"$tag\"}"
+    done
+
+    if [ -n "$best_tag" ]; then
+        printf '%s' "$best_tag"
+        return 0
+    fi
+
+    return 1
+}
+
+count_release_tags_in_list() {
+    local json="$1"
+    local normalized tag count=0
+
+    normalized="$(normalize_json "$json")"
+
+    while [[ $normalized =~ \"tag_name\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; do
+        tag="${BASH_REMATCH[1]}"
+        count=$((count + 1))
+        normalized="${normalized#*\"tag_name\":\"$tag\"}"
+    done
+
+    printf '%s' "$count"
+}
+
+found_latest_release_channel=false
+found_beta_release_channel=false
+found_nightly_release_channel=false
+
+record_release_channels_from_list() {
+    local json="$1"
+    local normalized tag version candidate_channel
+
+    normalized="$(normalize_json "$json")"
+
+    while [[ $normalized =~ \"tag_name\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; do
+        tag="${BASH_REMATCH[1]}"
+        version="$(strip_leading_v "$tag")"
+        candidate_channel="$(classify_release_channel "$version" || true)"
+        case "$candidate_channel" in
+            latest) found_latest_release_channel=true ;;
+            beta) found_beta_release_channel=true ;;
+            nightly) found_nightly_release_channel=true ;;
+        esac
+        normalized="${normalized#*\"tag_name\":\"$tag\"}"
+    done
+}
+
+have_required_release_channels() {
+    case "$1" in
+        latest) [ "$found_latest_release_channel" = true ] ;;
+        beta) [ "$found_latest_release_channel" = true ] && [ "$found_beta_release_channel" = true ] ;;
+        nightly) [ "$found_latest_release_channel" = true ] && [ "$found_beta_release_channel" = true ] && [ "$found_nightly_release_channel" = true ] ;;
+        *) return 1 ;;
+    esac
 }
 
 get_release_asset_name_for_platform() {
@@ -224,6 +364,7 @@ fi
 echo ""
 info "Detected platform: $platform"
 info "Using metadata source: $VERSIONS_URL"
+info "Using release channel: $RELEASE_CHANNEL"
 
 GITHUB_RELEASE_REPO="$(parse_github_release_repo "$VERSIONS_URL" || true)"
 
@@ -232,17 +373,35 @@ mkdir -p "$INSTALL_DIR"
 
 # Get latest version
 if [ -n "$GITHUB_RELEASE_REPO" ]; then
-    info "Fetching latest release..."
-    latest_json=$(download_file "https://api.github.com/repos/$GITHUB_RELEASE_REPO/releases/latest")
-    if [ "$HAS_JQ" = true ]; then
-        release_tag=$(echo "$latest_json" | jq -r '.tag_name // empty')
-    else
-        release_tag=$(get_json_value "$latest_json" "tag_name")
-    fi
+    info "Fetching release list..."
+    release_tag=''
+    best_release_key=''
+    for page in 1 2 3 4 5 6 7 8 9 10; do
+        page_json=$(download_file "https://api.github.com/repos/$GITHUB_RELEASE_REPO/releases?per_page=100&page=$page")
+        page_release_tag="$(pick_newest_allowed_release_tag_from_list "$page_json" "$RELEASE_CHANNEL" || true)"
+        if [ -n "$page_release_tag" ]; then
+            page_release_key="$(version_sort_key "$(strip_leading_v "$page_release_tag")")"
+            if [ -z "$best_release_key" ] || [ "$page_release_key" ">" "$best_release_key" ]; then
+                best_release_key="$page_release_key"
+                release_tag="$page_release_tag"
+            fi
+        fi
+
+        record_release_channels_from_list "$page_json"
+        page_count=$(count_release_tags_in_list "$page_json")
+        if have_required_release_channels "$RELEASE_CHANNEL"; then
+            break
+        fi
+        if [ "$page_count" -lt 100 ]; then
+            break
+        fi
+    done
+    [ -n "$release_tag" ] || error "Failed to resolve a release tag for channel $RELEASE_CHANNEL"
+    latest_json=$(download_file "https://api.github.com/repos/$GITHUB_RELEASE_REPO/releases/tags/$release_tag")
     version="$(strip_leading_v "$release_tag")"
 else
-    info "Fetching latest version..."
-    latest_json=$(download_file "$VERSIONS_URL/latest")
+    info "Fetching $RELEASE_CHANNEL pointer..."
+    latest_json=$(download_file "$VERSIONS_URL/$RELEASE_CHANNEL")
     if [ "$HAS_JQ" = true ]; then
         version=$(echo "$latest_json" | jq -r '.version // empty')
     else

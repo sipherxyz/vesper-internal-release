@@ -37,12 +37,12 @@ You can also download and run scripts locally:
 
 ### Download
 
-| Platform | File | Architecture |
-|----------|------|-------------|
-| macOS (Apple Silicon) | [`Vesper-arm64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-arm64.dmg) | M1 / M2 / M3 / M4 |
-| macOS (Intel) | [`Vesper-x64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.dmg) | Intel x86_64 |
-| Windows | [`Vesper-x64.exe`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.exe) | 64-bit |
-| Linux | [`Vesper-x86_64.AppImage`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x86_64.AppImage) | 64-bit |
+| Platform              | File                                                                                                                             | Architecture      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| macOS (Apple Silicon) | [`Vesper-arm64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-arm64.dmg)             | M1 / M2 / M3 / M4 |
+| macOS (Intel)         | [`Vesper-x64.dmg`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.dmg)                 | Intel x86_64      |
+| Windows               | [`Vesper-x64.exe`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x64.exe)                 | 64-bit            |
+| Linux                 | [`Vesper-x86_64.AppImage`](https://github.com/sipherxyz/vesper-internal-release/releases/latest/download/Vesper-x86_64.AppImage) | 64-bit            |
 
 You can use the direct links above, or browse all assets on the [Releases](https://github.com/sipherxyz/vesper-internal-release/releases) page.
 
@@ -128,13 +128,13 @@ When a new version is released, run the same install command again, or download 
 
 ## System Requirements
 
-| | Minimum |
-|---|---|
-| **macOS** | macOS 12 (Monterey) or later |
-| **Windows** | Windows 10 (64-bit) or later |
-| **Linux** | Ubuntu 20.04+ / Fedora 36+ or equivalent (x86_64, FUSE required) |
-| **RAM** | 8 GB recommended |
-| **Disk** | ~500 MB for the application |
+|             | Minimum                                                          |
+| ----------- | ---------------------------------------------------------------- |
+| **macOS**   | macOS 12 (Monterey) or later                                     |
+| **Windows** | Windows 10 (64-bit) or later                                     |
+| **Linux**   | Ubuntu 20.04+ / Fedora 36+ or equivalent (x86_64, FUSE required) |
+| **RAM**     | 8 GB recommended                                                 |
+| **Disk**    | ~500 MB for the application                                      |
 
 ---
 
@@ -167,6 +167,7 @@ Add an exception for `Vesper-x64.exe` in your antivirus software, or temporarily
 
 **App crashes on launch**
 Try deleting the cache and restarting:
+
 - macOS: `rm -rf ~/Library/Application\ Support/Vesper/Cache`
 - Linux: `rm -rf ~/.config/@vesper`
 - Windows: Delete `%APPDATA%\Vesper\Cache`

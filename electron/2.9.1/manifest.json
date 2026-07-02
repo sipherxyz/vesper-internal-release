@@ -1,0 +1,19 @@
+{
+  "version": "2.9.1",
+  "build_time": "2026-07-02T09:57:26.467Z",
+  "build_timestamp": 1782986246467,
+  "binaries": {
+    "darwin-arm64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.9.1/Vesper-arm64.dmg",
+      "sha256": "d2cc2656980c8599d6f367d237d8d44a0d36ccfaaed8bbb42ad13e7790f63818",
+      "size": 218153681,
+      "filename": "Vesper-arm64.dmg"
+    },
+    "win32-x64": {
+      "url": "https://github.com/sipherxyz/vesper-internal-release/releases/download/v2.9.1/Vesper-x64.exe",
+      "sha256": "80c5f4041053dc29549cd74d2b1aaf5997270af95a49023c07dc8db9ddf42a85",
+      "size": 193473631,
+      "filename": "Vesper-x64.exe"
+    }
+  }
+}
